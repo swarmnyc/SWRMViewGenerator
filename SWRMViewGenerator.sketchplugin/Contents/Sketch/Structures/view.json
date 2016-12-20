@@ -1,0 +1,20 @@
+{
+  "type": "UILabel",
+  "fontSize": 12,
+  "fontFamily": "Helvetica",
+  "textAlignment": "left",
+  "text": "example copy"
+  "constraints": {
+    "left": {
+      "snapTo": "superview", //or name of otherview
+      "offset": 10,
+    },
+    "width": {
+      "relativeTo": "superview", //or name of other view
+      "size": 50
+    },
+    "centerX": {
+      "relativeTo": "superview" //or name of other view
+    }
+  }
+}

@@ -1,0 +1,180 @@
+Plugin = {};
+
+Plugin.setConstraintsFor = function(layer) {
+    log(layer.parentSymbol());
+    var parent = layer.parentSymbol();
+    var siblings = [];
+    log("parent" + parent);
+    if (typeof parent == "undefined") {
+      parent = undefined
+;    } else {
+      var sibs = parent.layers()
+      for (var i = 0; i < sibs.length; i++) {
+        if (sibs[i].name() != layer.name()) {
+          siblings.push("-" + sibs[i].name());
+        }
+      }
+    }
+
+    siblings.splice(0,0, "superview");
+    siblings.push("");
+    log("got siblings");
+    var getSelector = function(selectedSibling) {
+      if (selectedSibling != "superview" && selectedSibling != "") {
+        selectedSibling = "-" + selectedSibling;
+      }
+      var accessory = [[NSComboBox alloc] initWithFrame:NSMakeRect(0,0,200,25)];
+      [accessory addItemsWithObjectValues:siblings]
+      var index = 0;
+      for (var i = 0; i < siblings.length; i++) {
+        if (siblings[i] == selectedSibling) {
+          index = i;
+        }
+      }
+      [accessory selectItemAtIndex:index]
+      return accessory;
+    }
+
+    var getCheckBox = function(title, selected) {
+      var checkBox = [[NSButton alloc] initWithFrame:NSMakeRect(0,0,200,25)];
+      [checkBox setButtonType:NSSwitchButton];
+      checkBox.title = title;
+      checkBox.state = selected;
+      return checkBox;
+    }
+
+    var command = Plugin.command;
+    log([command valueForKey:"top-constraint" onLayer:layer forPluginIdentifier:"SWRM"]);
+    var top = [command valueForKey:"top-constraint" onLayer:layer forPluginIdentifier:"SWRM"];
+
+    var left = [command valueForKey:"left-constraint" onLayer:layer forPluginIdentifier:"SWRM"];
+    var bottom = [command valueForKey:"bottom-constraint" onLayer:layer forPluginIdentifier:"SWRM"];
+    var right = [command valueForKey:"right-constraint" onLayer:layer forPluginIdentifier:"SWRM"];
+
+    var height = [command valueForKey:"height" onLayer: layer forPluginIdentifier:"SWRM"];
+    var width = [command valueForKey:"width" onLayer: layer forPluginIdentifier:"SWRM"];
+    log(width);
+    log(height);
+    log("^^^^ width and then height ^^^^^")
+    if (top != null) {
+    } else {
+      top = {offset: "", snapView: "", oppositeSide: false};
+    }
+
+    if (left != null) {
+    } else {
+      left = {offset: "", snapView: "", oppositeSide: false};
+    }
+
+    if (bottom != null) {
+    } else {
+      bottom = {offset: "", snapView: "", oppositeSide: false};
+    }
+
+    if (right != null) {
+    } else {
+      right = {offset: "", snapView: "", oppositeSide: false};
+    }
+
+    if (height == null) {
+      height = {"useHeight": 0, "snapView": ""};
+    }
+
+    if (width == null) {
+      width = {"useWidth": 0, "snapView": ""};
+    }
+
+    log("got saved constraint data");
+    log(width);
+    var alert = COSAlertWindow.new();
+    alert.setMessageText("Set Constraints For " + layer.name());
+
+    alert.addTextLabelWithValue("Snap Top to view:"); //0
+    alert.addAccessoryView(getSelector(top.snapView)); //1
+    alert.addAccessoryView(getCheckBox("Snap to view's bottom", top.oppositeSide)); //2
+
+
+
+    alert.addTextLabelWithValue("Snap Left to view:"); //3
+    alert.addAccessoryView(getSelector(left.snapView)); //4
+    alert.addAccessoryView(getCheckBox("Snap to view's right", left.oppositeSide)); //5
+
+
+
+    alert.addTextLabelWithValue("Snap Right to view:"); //6
+    alert.addAccessoryView(getSelector(right.snapView)); //7
+    alert.addAccessoryView(getCheckBox("Snap to view's left", right.oppositeSide)); //8
+
+
+    alert.addTextLabelWithValue("Snap Bottom to view:"); //9
+    alert.addAccessoryView(getSelector(bottom.snapView)); //10
+    alert.addAccessoryView(getCheckBox("Snap to view's top", right.oppositeSide)); //11
+
+
+    alert.addTextLabelWithValue("set width to view's width:"); //12
+    alert.addAccessoryView(getSelector(width.snapView)); //13
+
+    alert.addTextLabelWithValue("set height to view's height:"); //14
+    alert.addAccessoryView(getSelector(height.snapView)); //15
+
+    alert.addAccessoryView(getCheckBox("Fix Element's Height (sketch's pixel value)", height.useHeight)); //16
+    alert.addAccessoryView(getCheckBox("Fix Element's Width (sketch's pixel value)", width.useWidth)); //17
+    console.log("set up modal");
+
+    alert.runModal();
+    console.log("ran modal");
+
+
+    var top = {"snapView": alert.viewAtIndex(1).stringValue().replace("-", ""), "oppositeSide": alert.viewAtIndex(2).state()};
+    var left = {"snapView": alert.viewAtIndex(4).stringValue().replace("-", ""), "oppositeSide": alert.viewAtIndex(5).state()};
+    var right = {"snapView": alert.viewAtIndex(7).stringValue().replace("-", ""), "oppositeSide": alert.viewAtIndex(8).state()};
+    var bottom = {"snapView": alert.viewAtIndex(10).stringValue().replace("-", ""), "oppositeSide": alert.viewAtIndex(11).state()};
+
+    var height = {"useHeight": alert.viewAtIndex(16).state(), "snapView": alert.viewAtIndex(15).stringValue().replace("-", "")};
+    var width = {"useWidth": alert.viewAtIndex(17).state(), "snapView": alert.viewAtIndex(13).stringValue().replace("-", "")};
+    print(height);
+    print(width);
+    print("^^^^^  height then width  ^^^^^^")
+    [command setValue:top forKey:"top-constraint" onLayer:layer forPluginIdentifier:"SWRM"];
+    [command setValue:left forKey:"left-constraint" onLayer:layer forPluginIdentifier:"SWRM"];
+    [command setValue:right forKey:"right-constraint" onLayer:layer forPluginIdentifier:"SWRM"];
+    [command setValue:bottom forKey:"bottom-constraint" onLayer:layer forPluginIdentifier:"SWRM"];
+    [command setValue:height forKey:"height" onLayer:layer forPluginIdentifier:"SWRM"];
+    [command setValue:width forKey:"width" onLayer:layer forPluginIdentifier:"SWRM"];
+
+};
+
+
+
+
+
+Plugin.command;
+
+Plugin.start = function(context) {
+  Plugin.command = context.command;
+  var documentName = context.document.displayName();
+  log('The current document is named: ' + documentName);
+  var selectedLayers = context.selection;
+  log(selectedLayers);
+
+  if (selectedLayers.length > 1 || selectedLayers.length == 0) {
+    var alert = COSAlertWindow.new();
+    alert.setMessageText("Please select one layer");
+    alert.runModal();
+    return;
+  }
+
+  Plugin.setConstraintsFor(selectedLayers[0]);
+
+
+
+}
+
+var saveConstraints = function(context) {
+  log(context);
+  var documentName = context.document.displayName();
+  log('The current document is named: ' + documentName);
+  Plugin.start(context);
+
+
+};

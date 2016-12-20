@@ -1,0 +1,187 @@
+@import "utils.js"
+
+var CodeFormatter = {};
+
+CodeFormatter.classString =
+`
+class {ClassName}: UIView {
+
+  {subViewDeclerations}
+
+  override init(frame: CGRect) {
+      super.init(frame: frame)
+      didLoad()
+  }
+
+  required init?(coder aDecoder: NSCoder) {
+      super.init(coder: aDecoder)
+      didLoad()
+  }
+
+  func didLoad() {
+      {addViewCode}
+  }
+
+  override func updateConstraints() {
+    {constraintCode}
+    super.updateConstraints();
+  }
+
+
+}`;
+
+
+CodeFormatter.constraintDecleration =
+`
+  self.{viewName}.snp.remakeConstraints({
+    make in
+      {constraints}
+  });
+`
+CodeFormatter.individualConstraintDirection =
+`make.{constraintType}.equalTo(self{viewName}).offset({offset});
+`;
+CodeFormatter.individualConstraintEqualToOtherView =
+`make.{constraintType}.equalTo(self{viewName}.snp.{constraintType});
+`;
+CodeFormatter.individualConstraintWithHardValue =
+`make.{constraintType}.equalTo({value});
+`;
+CodeFormatter.viewDeclerationString =
+`
+  lazy fileprivate var {viewName}: {classType} = {
+    var view = {classType}();
+    {viewPropertiesDefinition}
+    return view;
+  }();
+`;
+
+CodeFormatter.viewPropertiesDefinitionString =
+`    view.{propertyName} = {propertyValue};
+`;
+CodeFormatter.viewAddSubviewStrings =
+`    self.addSubview(self.{viewName})
+`;
+
+CodeFormatter.getClassFromTree = function(tree) {
+  var str = CodeFormatter.classString;
+  var prop = "";
+  for (var property in tree) { //lets get the top level property of the tree
+    if (tree.hasOwnProperty(property)) {
+        prop = property;
+    }
+  }
+  str = str.replace("{ClassName}", Utils.capitalizeFirstLetter(Utils.camelize(prop)));
+  str = CodeFormatter.setUpSubViewDeclerations(str, tree[prop]);
+  str = CodeFormatter.setUpChildViewAdd(str, tree[prop]);
+  return str;
+}
+
+
+CodeFormatter.setUpChildViewAdd = function(str, tree) {
+  var addStrings = "";
+  for (var property in tree.children) { //lets get the top level property of the tree
+    if (tree.children.hasOwnProperty(property)) {
+        addStrings += CodeFormatter.viewAddSubviewStrings.replace("{viewName}", Utils.camelize(property));
+    }
+  }
+  str = str.replace("{addViewCode}", addStrings);
+  return str;
+}
+
+CodeFormatter.setUpSubViewDeclerations = function(classString, tree) {
+    var declerations = "";
+    //log(tree);
+    for (var property in tree.children) { //lets get the top level property of the tree
+      if (tree.children.hasOwnProperty(property)) {
+          if (tree.children[property].type == "UILabel") {
+            declerations += CodeFormatter.createTextViewDecleration(tree.children[property], property);
+          }
+      }
+    }
+    classString = classString.replace("{subViewDeclerations}", declerations);
+    classString = classString.replace("{constraintCode}", CodeFormatter.createConstraints(tree));
+    return classString;
+}
+
+
+CodeFormatter.createConstraints = function(tree) {
+    var constraints = "";
+    for (var property in tree.children) { //lets get the top level property of the tree
+      if (tree.children.hasOwnProperty(property)) {
+        constraints += CodeFormatter.createConstraintsForChild(tree.children[property], property);
+      }
+    }
+    return constraints;
+}
+
+CodeFormatter.createConstraintsForChild = function(tree, property) {
+    var mainConstraint = CodeFormatter.constraintDecleration;
+    mainConstraint = mainConstraint.replace("{viewName}", Utils.camelize(property));
+    var constraints = tree.constraints;
+    var constraintString = "";
+
+    for (var property in tree.constraints) { //lets get the top level property of the tree
+      if (tree.constraints.hasOwnProperty(property)) {
+          if (property == "width" || property == "height") {
+              var constraints = tree.constraints[property];
+              if (constraints.snapView != "" || constraints.useHeight == 1 || constraints.useWidth == 1) {
+                  if (constraints.snapView != "") {
+                      var singleCon = CodeFormatter.individualConstraintEqualToOtherView;
+                      singleCon = singleCon.replace("{constraintType}", property);
+                      singleCon = singleCon.replace("{constraintType}", property);
+                      var view = constraints.snapView;
+                      if (view == "superview") {
+                        view = "";
+                      } else {
+                        view = "." + Utils.uncapitalizeFirstLetter(Utils.camelize(view));
+                      }
+                      singleCon = singleCon.replace('{viewName}', view);
+                      constraintString += singleCon;
+                  } else {
+                      var singleCon = CodeFormatter.individualConstraintWithHardValue;
+                      singleCon = singleCon.replace("{constraintType}", property);
+                      singleCon = singleCon.replace("{value}", constraints.value);
+                      constraintString += singleCon;
+                  }
+              }
+          } else {
+            if (tree.constraints[property].snapView != "" && tree.constraints[property].offset != "") {
+
+            var singleCon = CodeFormatter.individualConstraintDirection;
+            var view = tree.constraints[property].snapView;
+            if (view == "superview") {
+              view = "";
+            } else {
+              view = "." + Utils.uncapitalizeFirstLetter(Utils.camelize(view));
+            }
+            if (tree.constraints[property].oppositeSide == 1) {
+              view += ".snp." + Utils.getOpposite(property);
+            }
+            singleCon = singleCon.replace("{constraintType}", property);
+            singleCon = singleCon.replace("{viewName}", view);
+            singleCon = singleCon.replace("{offset}", tree.constraints[property].offset);
+            constraintString += singleCon;
+          }
+          }
+      }
+    }
+    mainConstraint = mainConstraint.replace("{constraints}", constraintString);
+
+    return mainConstraint;
+
+}
+
+CodeFormatter.createTextViewDecleration = function(tree, layerName) {
+    var str = CodeFormatter.viewDeclerationString;
+    str = str.replace('{viewName}', Utils.camelize(layerName))
+    str = str.replace('{classType}', tree.type);
+    str = str.replace('{classType}', tree.type);
+    var propertyDef = "";
+    propertyDef += CodeFormatter.viewPropertiesDefinitionString.replace("{propertyValue}", tree.alignment).replace("{propertyName}", "textAlignment");
+    propertyDef += CodeFormatter.viewPropertiesDefinitionString.replace("{propertyValue}", tree.colorStr).replace("{propertyName}", "textColor");
+    propertyDef += CodeFormatter.viewPropertiesDefinitionString.replace("{propertyValue}", tree.font).replace("{propertyName}", "font");
+    propertyDef += CodeFormatter.viewPropertiesDefinitionString.replace("{propertyValue}", tree.text).replace("{propertyName}", "text");
+    str = str.replace("{viewPropertiesDefinition}", propertyDef);
+    return str;
+}

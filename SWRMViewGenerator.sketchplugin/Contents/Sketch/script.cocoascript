@@ -1,0 +1,735 @@
+@import "Utils.js"
+
+var writeTextToFile = function(text, filePath, error) {
+  var t = [NSString stringWithFormat: @"%@", text],
+    f = [NSString stringWithFormat: @"%@", filePath];
+  return [t writeToFile: f atomically: true encoding: NSUTF8StringEncoding error:
+    error];
+}
+
+var readTextFromFile = function(filePath) {
+  var fileManager = [NSFileManager defaultManager];
+  if ([fileManager fileExistsAtPath: filePath]) {
+    return [NSString stringWithContentsOfFile: filePath encoding:
+      NSUTF8StringEncoding error: nil];
+  }
+  return nil;
+}
+
+var jsonFromFile = function(filePath, mutable) {
+  var data = [NSData dataWithContentsOfFile: filePath];
+  var options = mutable == true ? NSJSONReadingMutableContainers : 0
+  return [NSJSONSerialization JSONObjectWithData: data options: options error:
+    nil];
+}
+
+var saveJsonToFile = function(jsonObj, filePath) {
+  writeTextToFile(stringify(jsonObj), filePath);
+}
+
+var stringify = function(obj, prettyPrinted) {
+  var prettySetting = prettyPrinted ? NSJSONWritingPrettyPrinted : 0,
+    jsonData = [NSJSONSerialization dataWithJSONObject: obj options:
+      prettySetting error: nil
+    ];
+  return [[NSString alloc] initWithData: jsonData encoding: NSUTF8StringEncoding];
+}
+
+var createTempFolderNamed = function(name) {
+  var tempPath = getTempFolderPath(name);
+  createFolderAtPath(tempPath);
+  return tempPath;
+}
+
+var getTempFolderPath = function(withName) {
+  var fileManager = [NSFileManager defaultManager],
+    cachesURL = [[fileManager URLsForDirectory: NSCachesDirectory inDomains:
+        NSUserDomainMask] lastObject],
+    withName = (typeof withName !== 'undefined') ? withName : (Date.now() /
+      1000),
+    folderName = [NSString stringWithFormat: "%@", withName];
+  return [[cachesURL URLByAppendingPathComponent: folderName] path];
+}
+
+var createFolderAtPath = function(pathString) {
+  log(pathString);
+  log("creating folder at path ^^^^");
+  var fileManager = [NSFileManager defaultManager];
+  if ([fileManager fileExistsAtPath: pathString]) return true;
+  return [fileManager createDirectoryAtPath: pathString withIntermediateDirectories:
+    true attributes: nil error: nil];
+}
+
+var removeFileOrFolder = function(filePath) {
+  [[NSFileManager defaultManager] removeItemAtPath: filePath error: nil];
+}
+
+var Utils = {};
+Utils.runOnEachSelectedLayer = function(selection, loopCount, callback,
+  onViewStringCallback, onHitEnd, onConstraintCallback) {
+
+
+  if (selection.count() == 0) {
+    callback("You don't have anything selected", nil);
+  } else {
+    for (var i = 0; i < selection.count(); i++) {
+      callback(nil, loopCount, selection[i], onViewStringCallback, onHitEnd, onConstraintCallback);
+    }
+  }
+}
+
+
+
+Utils.getChildLayers = function(layer) {
+  if (typeof layer.layers != "undefined") {
+    return layer.layers();
+  } else {
+    return [];
+  }
+}
+
+Utils.getStringWithIndent = function(numberOfSpaces, str) {
+  var string = "";
+  for (var i = 0; i < numberOfSpaces * 5; i++) {
+    string += "--";
+  }
+  string += str;
+  return string;
+}
+
+Utils.layerHasChildren = function(layer) {
+  if (typeof layer.layers != "undefined" && layer.layers().count() !=
+    0) {
+    return true;
+  }
+  return false;
+}
+
+Utils.isLayerExportable = function(layer) {
+  return layer.isLayerExportable();
+}
+
+Utils.isLayerASymbol = function(layer) {
+  if (layer.superclass().toString().indexOf("Symbol") != -1) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+Utils.isLayerASymbolInstance = function(layer) {
+  if (layer.superclass().toString().indexOf("SymbolInstance") != -1) {
+    return true;
+  } else {
+    return false;
+  }
+}
+Utils.isLayerShape = function(layer) {
+  if (layer.superclass().toString().indexOf("Shape") != -1) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+Utils.isTextLayer = function(layer) {
+  if (layer.superclass().toString().indexOf("Text") != -1) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+Utils.getMasterSymbol = function(symbolInstance) {
+  //log(symbolInstance.symbolMaster());
+  return symbolInstance.symbolMaster();
+}
+
+Utils.getTextAlignmentString = function(layer) {
+  switch (layer.textAlignment()) {
+    case 0:
+      return ".left";
+      break;
+    case 1:
+      return ".right";
+      break;
+
+    case 2:
+      return ".center";
+      break;
+
+    case 3:
+      return ".center"; //THIS IS REALLY JUSTIFIED
+      break;
+  }
+
+  return ".center";
+}
+
+
+Utils.classString =
+  `
+class {ClassName}: UIView {
+
+  {subViewDeclerations}
+
+  override init(frame: CGRect) {
+      super.init(frame: frame)
+      didLoad()
+  }
+
+  required init?(coder aDecoder: NSCoder) {
+      super.init(coder: aDecoder)
+      didLoad()
+  }
+
+  func didLoad() {
+      {addViewCode}
+  }
+
+  override func updateConstraints() {
+    {constraintCode}
+    super.updateConstraints();
+  }
+
+
+}
+`;
+
+Utils.viewDeclerationString =
+  `
+  lazy private var {viewName}: {classType} = {
+    var view = {classType}();
+    {viewPropertiesDefinition}
+    return view;
+  }();
+`
+
+Utils.viewPropertiesDefinitionString =
+  `
+    view.{propertyName} = {propertyValue};
+`;
+
+Utils.isLayerConstraints = function(layer) {
+  if (layer.name() == "constraints") {
+    return true;
+  }
+  return false;
+}
+
+
+Utils.createViewClassString = function(className, declerationList, classNames,
+  instanceNames, constraintString) {
+  var str = Utils.classString;
+  str = str.replace("{ClassName}", Utils.capitalizeFirstLetter(className));
+  var decStrings = "";
+  for (var i = 0; i < declerationList.length; i++) {
+    decStrings += declerationList[i];
+    decStrings += "\n";
+  }
+  str = str.replace("{subViewDeclerations}", decStrings);
+  str = str.replace("{addViewCode}", Utils.createAddViewCode(instanceNames));
+  str = Utils.addConstraintString(str, constraintString);
+  return str;
+}
+
+Utils.addConstraintString = function(classString, constraintString) {
+  classString = classString.replace("{constraintCode}", constraintString);
+  return classString;
+}
+
+Utils.createAddViewCode = function(instancesNames) {
+  var str = "";
+  for (var i = 0; i < instancesNames.length; i++) {
+    str += "self.addSubview(self." + instancesNames[i] + ");";
+    str += "\n";
+  }
+  return str;
+}
+
+Utils.capitalizeFirstLetter = function(string) {
+  return string.charAt(0).toUpperCase() + string.slice(1);
+}
+
+Utils.uncapitalizeFirstLetter = function(string) {
+  return string.charAt(0).toLowerCase() + string.slice(1);
+}
+
+Utils.createViewDeclerationString = function(viewName, classType,
+  propertyDefinition) {
+  var str = Utils.viewDeclerationString;
+  str = str.replace("{viewName}", viewName);
+  str = str.replace("{classType}", classType).replace("{classType}",
+    classType);
+  str = str.replace("{viewPropertiesDefinition}", propertyDefinition);
+  return str;
+
+}
+
+Utils.createPropertyDefinition = function(propertyName, propertyValue) {
+  var str = Utils.viewPropertiesDefinitionString;
+  str = str.replace("{propertyName}", propertyName);
+  str = str.replace("{propertyValue}", propertyValue);
+  return str
+}
+
+Utils.createPropertyDefinitionList = function(propertyNamesAndValues) {
+  var str = "";
+  for (var i = 0; i < propertyNamesAndValues.length; i++) {
+    var item = propertyNamesAndValues[i];
+    str += Utils.createPropertyDefinition(item.propertyName, item.propertyValue);
+    str += "\n";
+  }
+  return str;
+}
+
+
+Utils.chooseADirectory = function() {
+  var panel = NSOpenPanel.openPanel();
+  panel.canChooseDirectories = true;
+  panel.canChooseFiles = false;
+  panel.title = "Choose where your view files will be written."
+  var result = panel.runModal();
+  log(result);
+  if (result == 1) {
+    log("Selected a directory");
+    return panel.URLs()[0];
+  }
+  log("SELECTED RESULT ^^^");
+}
+
+Utils.camelize = function(str) {
+  return str.replace(/(?:^\w|[A-Z]|\b\w|\s+)/g, function(match, index) {
+    if (+match === 0) return ""; // or if (/\s+/.test(match)) for white spaces
+    return index == 0 ? match.toLowerCase() : match.toUpperCase();
+  });
+}
+
+
+Utils.getSideConstraint = function(layer, constraint, type) {
+  log(constraint);
+    if (constraint == "") {
+      return "";
+    }
+    if (constraint.snapView == "" || typeof constraint.snapView == "undefined") {
+      return "";
+    }
+
+    if (constraint.snapView == "superview") {
+      var str = "make." + type + ".equalToSuperview().offset(" + constraint.offset + ")";
+      return str;
+    } else {
+      var snapViewName = Utils.uncapitalizeFirstLetter(Utils.camelize(constraint.snapView).replace("-", ""));
+      log("OPPOSITE SIDE!!!!!!: " + constraint.oppositeSide);
+      if (constraint.oppositeSide == 1) {
+        snapViewName += ".snp." + Utils.getOpposite(type);
+      }
+      var str = "make." + type + ".equalTo(self." + snapViewName + ").offset(" + constraint.offset + ")";
+      return str;
+    }
+}
+
+Utils.getOpposite = function(type) {
+  switch(type) {
+    case "left":
+    return "right";
+    case "right":
+    return "left";
+    case "top":
+    return "bottom";
+    case "bottom":
+    return "top";
+  }
+
+  return "";
+}
+
+Utils.getSizeConstraint = function(layer, constraint, type) {
+
+
+  if (constraint == 0) {
+    return "";
+  }
+  var size = 0;
+  if (type == "width") {
+    size = layer.frame().width();
+  } else {
+    size = layer.frame().height();
+  }
+
+  var str = "make." + type + ".equalTo(" + size + ")";
+  return str;
+}
+
+Utils.getConstraintString = function(layer, constraints) {
+  // {
+  //   top: top,
+  //   left: left,
+  //   right: right,
+  //   bottom: bottom,
+  //   useWidth: useWidth,
+  //   useHeight: useHeight;
+  // }
+  log("Constraints: " + layer.name());
+  log(layer);
+  log(constraints);
+  var str = "self." + Utils.camelize(layer.name()) + ".snp.remakeConstraints({\n";
+  str += "  make in \n";
+  str += Utils.getSideConstraint(layer, constraints.top, "top") + "\n";
+  str += Utils.getSideConstraint(layer, constraints.left, "left") + "\n";
+  str += Utils.getSideConstraint(layer, constraints.bottom, "bottom") + "\n";
+  str += Utils.getSideConstraint(layer, constraints.right, "right") + "\n";
+  str += Utils.getSizeConstraint(layer, constraints.useWidth, "width") + "\n";
+  str += Utils.getSizeConstraint(layer, constraints.useHeight, "height") + "\n";
+  str += "})";
+  return str;
+
+}
+
+
+var Plugin = {};
+
+Plugin.context;
+Plugin.document;
+Plugin.page;
+Plugin.saveDirectory;
+Plugin.command;
+Plugin.setContext = function(context) {
+  Plugin.context = context;
+  Plugin.document = context.document;
+  Plugin.page = context.document.currentPage();
+
+}
+
+Plugin.start = function(context) {
+  Plugin.setContext(context);
+  Plugin.command = context.command;
+  log(context);
+  //Plugin.saveDirectory = Utils.chooseADirectory();
+  var propertyDefinition = Utils.createPropertyDefinitionList([{
+    propertyName: "backgroundColor",
+    propertyValue: ".black"
+  }, {
+    propertyName: "textAlignment",
+    propertyValue: ".left"
+  }])
+  Utils.createViewDeclerationString("test", "Test", propertyDefinition);
+  //  Utils.chooseADirectory();
+  var selectedLayers = context.selection;
+  Utils.runOnEachSelectedLayer(selectedLayers, 1, Plugin.onSelectedLayerCallback);
+
+}
+
+Plugin.onSelectedLayerCallback = function(error, loopCount, layer,
+  viewStringCallback, onHitEnd, onConstraintCallback) {
+  if (error != nil) {
+    log(error);
+    return;
+  }
+
+  log("on Selected Layer Callback");
+
+  Plugin.printLayerInfo(loopCount, layer);
+  Plugin.layerRouter(loopCount, layer, viewStringCallback, onHitEnd, onConstraintCallback);
+};
+
+
+Plugin.printLayerInfo = function(loopCount, layer) {
+  log(Utils.getStringWithIndent(loopCount, "****"));
+  log(Utils.getStringWithIndent(loopCount, "****"));
+
+  if (Utils.isLayerASymbolInstance(layer)) {
+
+    log(Utils.getStringWithIndent(loopCount, layer.symbolMaster().name()));
+  } else {
+    log(Utils.getStringWithIndent(loopCount, layer.name()));
+
+  }
+
+
+  log(Utils.getStringWithIndent(loopCount, "*" + layer.class().toString()) +
+    "*");
+  Plugin.printLayerSize(loopCount, layer.frame());
+}
+
+
+Plugin.printLayerSize = function(loopCount, frame) {
+  log(Utils.getStringWithIndent(loopCount, "width: " + frame.size()
+    .width));
+  log(Utils.getStringWithIndent(loopCount, "height: " + frame.size()
+    .height));
+  log(Utils.getStringWithIndent(loopCount, "x: " + frame.origin()
+    .x));
+  log(Utils.getStringWithIndent(loopCount, "y: " + frame.origin()
+    .y));
+}
+
+
+Plugin.layerRouter = function(loopCount, layer, viewStringCallback, onHitEnd, onConstraintCallback) {
+  var sublayers = Utils.getChildLayers(layer);
+  var hasChildrenAndIsNotExportable = (Utils.layerHasChildren(layer) && (
+    Utils.isLayerExportable(layer) == false));
+
+
+  if (Utils.isLayerASymbol(layer)) { //this layer is a symbol
+    log("PARSING SYMBOL");
+    Plugin.parseSymbol(loopCount, layer, viewStringCallback);
+    //return;
+  } else if (Utils.isLayerExportable(layer) &&
+    hasChildrenAndIsNotExportable == false) { // this layer is an image
+    Plugin.parseImage(loopCount, layer, viewStringCallback);
+    //return;
+  } else if (Utils.isLayerShape(layer) && hasChildrenAndIsNotExportable ==
+    false) {
+    Plugin.parseShape(loopCount, layer, viewStringCallback);
+    //return;
+  } else if (Utils.isTextLayer(layer) && hasChildrenAndIsNotExportable ==
+    false) {
+    Plugin.parseTextLayer(loopCount, layer, viewStringCallback);
+  }
+
+  if (typeof onHitEnd == "function") {
+    onHitEnd();
+  }
+  Plugin.sendConstraints(layer, onConstraintCallback);
+
+
+  log("hit end of tree");
+  if (Utils.layerHasChildren(layer)) { // check if the layer has sublayers
+    if (Utils.isLayerExportable(layer) == false) { //if the layer is not an image we keep going deeper
+      log(
+        "hit somewhere it shouldn't have, right now this usually means it entered an MSShapeGRoup"
+      );
+      Plugin.parseSublayers(loopCount, sublayers);
+      return;
+    }
+
+  }
+
+
+
+}
+
+
+Plugin.sendConstraints = function(layer, onConstraintCallback) {
+  var constraints = Plugin.getConstraintsFor(layer);
+  var str = Utils.getConstraintString(layer, constraints);
+  print(str);
+  log(onConstraintCallback);
+  if (typeof onConstraintCallback == "function") {
+    onConstraintCallback(str);
+  }
+
+}
+
+Plugin.parseTextLayer = function(loopCount, layer, viewStringCallback) {
+  log(Utils.getStringWithIndent(loopCount, "view text: '" + layer.stringValue() +
+    "'"));
+  log(Utils.getStringWithIndent(loopCount, "view font: '" + layer.font()
+    .fontName() +
+    "'"));
+  log(Utils.getStringWithIndent(loopCount, "view font size: '" + layer.font()
+    .pointSize() +
+    "'"));
+  var textAlignment = layer.textAlignment();
+  log(Utils.getStringWithIndent(loopCount, "view font size: '" +
+    textAlignment +
+    "'"));
+
+  var font = layer.font().fontName();
+  var fontPointSize = layer.font().pointSize();
+  var alignment = Utils.getTextAlignmentString(layer);
+  var color = layer.styleAttributes()["NSColor"];
+  var colorStr = "red: " + color.redComponent() + " green: " + color.greenComponent() +
+    " blue: " + color.blueComponent() + " alpha " + color.alphaComponent();
+  // log(Utils.getStringWithIndent(loopCount, "view font color: '" +
+  //   colorStr +
+  //   "'"));
+  var viewOptions = [{
+    propertyName: "textColor",
+    propertyValue: "UIColor(colorLiteralRed: " + color.redComponent() +
+      ", green: " + color.greenComponent() +
+      ", blue: " + color.blueComponent() + ",alpha: " + color.alphaComponent() +
+      ")"
+  }, {
+    propertyName: "textAlignment",
+    propertyValue: alignment
+  }, {
+    propertyName: "font",
+    propertyValue: "UIFont(name: \"" + font + "\", size: " + fontPointSize +
+      ")"
+  }, {
+    propertyName: "text",
+    propertyValue: "\"" + layer.stringValue() + "\""
+  }];
+  var instanceName = Utils.camelize(
+    layer.name());
+  var declerationString = Utils.createViewDeclerationString(instanceName,
+    "UILabel", Utils.createPropertyDefinitionList(
+      viewOptions));
+  if (typeof viewStringCallback == "function") {
+    viewStringCallback(declerationString, "UILabel", instanceName);
+  }
+
+
+}
+
+
+Plugin.parseShape = function(loopCount, layer) {
+
+  //log("shapeName: " + layer.defaultName());
+}
+
+Plugin.parseImage = function(loopCount, layer,viewStringCallback) {
+  log(Utils.getStringWithIndent(loopCount, "This layer is an image"));
+
+  var viewOptions = [{
+    propertyName: "contentMode",
+    propertyValue: ".scaleAspectFill"
+  }, {
+    propertyName: "backgroundColor",
+    propertyValue: "UIColor.red"
+  }];
+  var instanceName = Utils.camelize(
+    layer.name());
+  var declerationString = Utils.createViewDeclerationString(instanceName,
+    "UIImageView", Utils.createPropertyDefinitionList(
+      viewOptions));
+  if (typeof viewStringCallback == "function") {
+    viewStringCallback(declerationString, "UIImageView", instanceName);
+  }
+
+
+}
+
+Plugin.parseSymbol = function(loopCount, layer, viewStringCallback) {
+  var masterSymbol = layer;
+  if (typeof layer.symbolMaster != "undefined") {
+    masterSymbol = Utils.getMasterSymbol(layer);
+  }
+  var layers = Utils.getChildLayers(masterSymbol);
+  if (Utils.layerHasChildren(masterSymbol)) {
+    log("WORKING WITH MASTER SYMBOL!");
+    loopCount += 1;
+    var declerationStrings = [];
+    var classStrings = [];
+    var instanceStrings = [];
+    var constraintString = "";
+    var classString = "";
+    Utils.runOnEachSelectedLayer(layers, loopCount, Plugin.onSelectedLayerCallback,
+      function(declerationString, className, instanceName) {
+        declerationStrings.push(declerationString);
+        classStrings.push(className);
+        instanceStrings.push(instanceName);
+
+      },
+      function() {
+       classString = Utils.createViewClassString(Utils.camelize(layer.name()),
+          declerationStrings, classStrings, instanceStrings, constraintString);
+         log(classString);
+         output[layer.name()] = classString;
+         copyStringToClipboard(JSON.stringify(output))
+
+      }, function(constraints) {
+        constraintString += "\n " + constraints;
+
+        classString = Utils.createViewClassString(Utils.camelize(layer.name()),
+           declerationStrings, classStrings, instanceStrings, constraintString);
+          log(classString);
+          output[layer.name()] = classString;
+          copyStringToClipboard(JSON.stringify(output))
+      });
+  }
+
+  var instanceName = Utils.camelize(
+    layer.name());
+  var className = Utils.capitalizeFirstLetter(instanceName);
+  var declerationString = Utils.createViewDeclerationString(instanceName,
+    className, "");
+  if (typeof viewStringCallback == "function") {
+    viewStringCallback(declerationString, "UILabel", instanceName);
+  }
+}
+
+
+
+
+
+
+Plugin.getConstraintsFor = function(layer) {
+  var command = Plugin.command;
+  log([command valueForKey:"top-constraint" onLayer:layer forPluginIdentifier:"SWRM"]);
+
+  var top = [command valueForKey:"top-constraint" onLayer:layer forPluginIdentifier:"SWRM"];
+  var left = [command valueForKey:"left-constraint" onLayer:layer forPluginIdentifier:"SWRM"];
+  var bottom = [command valueForKey:"bottom-constraint" onLayer:layer forPluginIdentifier:"SWRM"];
+  var right = [command valueForKey:"right-constraint" onLayer:layer forPluginIdentifier:"SWRM"];
+  var useHeight = [command valueForKey:"useHeight" onLayer: layer forPluginIdentifier:"SWRM"];
+  var useWidth = [command valueForKey:"useWidth" onLayer: layer forPluginIdentifier:"SWRM"];
+  log(left);
+
+  if (top != null) {
+  } else {
+    top = {};
+  }
+
+  if (left != null) {
+  } else {
+    left = ""
+  }
+
+  if (bottom != null) {
+  } else {
+    bottom = ""
+  }
+
+  if (right != null) {
+  } else {
+    right = ""
+  }
+
+  if (useWidth == null) {
+    useWidth = false;
+  }
+
+  if (useHeight == null) {
+    useHeight = false;
+  }
+  return {
+    top: top,
+    left: left,
+    right: right,
+    bottom: bottom,
+    useWidth: useWidth,
+    useHeight: useHeight
+  }
+
+}
+
+Plugin.parseSublayers = function(loopCount, sublayers) {
+  loopCount += 1;
+  Utils.runOnEachSelectedLayer(sublayers, loopCount, Plugin.onSelectedLayerCallback);
+};
+
+var onRun = function(context) {
+  var documentName = context.document.displayName();
+  log('The current document is named: ' + documentName);
+  Plugin.start(context);
+
+
+};
+var output = {};
+var copyStringToClipboard = function(str) {
+  log(str);
+  var pasteBoard = [NSPasteboard generalPasteboard]
+  log(pasteBoard);
+  [pasteBoard clearContents];
+  [pasteBoard declareTypes:[NSArray arrayWithObject:NSPasteboardTypeString] owner:nil]
+  [pasteBoard setString:str forType:NSPasteboardTypeString]
+log("COPIED TO CLIPBOARD!!!");
+}
+
+
+onRun(context);
+
+//onRun(context);

@@ -1,0 +1,33 @@
+{
+  "author": "",
+  "commands": [{
+    "script": "generateViewCode.js",
+    "name": "Generate View Code",
+    "handlers": {
+      "run": "generateViewCode"
+    },
+    "shortcut": "option shift g",
+    "identifier": "com.SWRM.sketch.generateViewCode"
+  }, {
+    "script": "saveConstraints.cocoascript",
+    "name": "Save Constraints For Layer",
+    "handlers": {
+      "run": "saveConstraints"
+    },
+    "shortcut": "option shift s",
+    "identifier": "com.SWRM.sketch.saveConstraints"
+  }],
+  "menu": {
+    "items": [
+      "com.SWRM.sketch.generateViewCode",
+      "com.SWRM.sketch.saveConstraints"
+    ],
+    "title": "SWRM Code Generator"
+  },
+  "identifier": "com.example.sketch.41ba76d9-f274-4e07-af1b-5db2dc968eaa",
+  "version": "1.0",
+  "description": "",
+  "authorEmail": "",
+  "name": "SWRM Code Generator",
+  "disableCocoaScriptPreprocessor": false
+}
