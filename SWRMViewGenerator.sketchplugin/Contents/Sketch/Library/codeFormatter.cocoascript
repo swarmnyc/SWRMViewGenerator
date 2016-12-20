@@ -96,6 +96,8 @@ CodeFormatter.setUpSubViewDeclerations = function(classString, tree) {
       if (tree.children.hasOwnProperty(property)) {
           if (tree.children[property].type == "UILabel") {
             declerations += CodeFormatter.createTextViewDecleration(tree.children[property], property);
+          } else if (tree.children[property].type == "UIImageView") {
+            declerations += CodeFormatter.createImageViewDecleration(tree.children[property], property);
           }
       }
     }
@@ -146,7 +148,7 @@ CodeFormatter.createConstraintsForChild = function(tree, property) {
                   }
               }
           } else {
-            if (tree.constraints[property].snapView != "" && tree.constraints[property].offset != "") {
+            if (tree.constraints[property].snapView != "" && tree.constraints[property].offset != null) {
 
             var singleCon = CodeFormatter.individualConstraintDirection;
             var view = tree.constraints[property].snapView;
@@ -170,6 +172,18 @@ CodeFormatter.createConstraintsForChild = function(tree, property) {
 
     return mainConstraint;
 
+}
+
+CodeFormatter.createImageViewDecleration = function(tree, layerName) {
+  var str = CodeFormatter.viewDeclerationString;
+  str = str.replace('{viewName}', Utils.camelize(layerName))
+  str = str.replace('{classType}', tree.type);
+  str = str.replace('{classType}', tree.type);
+  var propertyDef = "";
+  propertyDef += CodeFormatter.viewPropertiesDefinitionString.replace("{propertyValue}", tree.contentMode).replace("{propertyName}", "contentMode");
+  propertyDef += CodeFormatter.viewPropertiesDefinitionString.replace("{propertyValue}", tree.image).replace("{propertyName}", "image");
+  str = str.replace("{viewPropertiesDefinition}", propertyDef);
+  return str;
 }
 
 CodeFormatter.createTextViewDecleration = function(tree, layerName) {

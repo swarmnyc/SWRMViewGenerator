@@ -1,7 +1,7 @@
 {
   "author": "",
   "commands": [{
-    "script": "generateViewCode.js",
+    "script": "generateViewCode.cocoascript",
     "name": "Generate View Code",
     "handlers": {
       "run": "generateViewCode"

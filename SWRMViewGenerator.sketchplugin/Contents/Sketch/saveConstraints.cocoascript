@@ -6,8 +6,8 @@ Plugin.setConstraintsFor = function(layer) {
     var siblings = [];
     log("parent" + parent);
     if (typeof parent == "undefined") {
-      parent = undefined
-;    } else {
+      parent = undefined;
+    } else {
       var sibs = parent.layers()
       for (var i = 0; i < sibs.length; i++) {
         if (sibs[i].name() != layer.name()) {
