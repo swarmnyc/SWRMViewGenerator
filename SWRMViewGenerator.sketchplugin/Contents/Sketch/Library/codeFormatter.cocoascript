@@ -98,6 +98,8 @@ CodeFormatter.setUpSubViewDeclerations = function(classString, tree) {
             declerations += CodeFormatter.createTextViewDecleration(tree.children[property], property);
           } else if (tree.children[property].type == "UIImageView") {
             declerations += CodeFormatter.createImageViewDecleration(tree.children[property], property);
+          } else {
+            declerations += CodeFormatter.createSymbolDecleration(tree.children[property], property);
           }
       }
     }
@@ -182,6 +184,16 @@ CodeFormatter.createImageViewDecleration = function(tree, layerName) {
   var propertyDef = "";
   propertyDef += CodeFormatter.viewPropertiesDefinitionString.replace("{propertyValue}", tree.contentMode).replace("{propertyName}", "contentMode");
   propertyDef += CodeFormatter.viewPropertiesDefinitionString.replace("{propertyValue}", tree.image).replace("{propertyName}", "image");
+  str = str.replace("{viewPropertiesDefinition}", propertyDef);
+  return str;
+}
+
+CodeFormatter.createSymbolDecleration = function(tree, layerName) {
+  var str = CodeFormatter.viewDeclerationString;
+  str = str.replace('{viewName}', Utils.uncapitalizeFirstLetter(Utils.camelize(layerName)));
+  str = str.replace('{classType}', tree.type);
+  str = str.replace('{classType}', tree.type);
+  var propertyDef = "";
   str = str.replace("{viewPropertiesDefinition}", propertyDef);
   return str;
 }
