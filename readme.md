@@ -16,7 +16,7 @@ Table of Contents
 * [How to generate the code](#how-to-generate-code)
 * [How it works](#how-it-works)
 * [How to modify it](#how-to-modify-it)
-* [Ideas for the Future](#ideas-for-the-Future)
+* [Ideas for the Future](#ideas-for-the-future)
 
 
 How to set up your sketch file/ What to expect
