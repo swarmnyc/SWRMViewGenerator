@@ -10,8 +10,8 @@
 ![sketch section 1](images/symbol.png) ![sketch section 2](images/preview.png)
 
 
-Table of Contents
-=================
+TOC
+==
 * [How to set up your sketch file/ What to expect](#how-to-set-up-your-sketch-file/-What-to-expect)
 * [How to generate the code](#how-to-generate-code)
 * [How it works](#how-it-works)
