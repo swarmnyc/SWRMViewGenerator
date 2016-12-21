@@ -12,11 +12,11 @@
 
 Table of Contents
 =================
-* [How to set up your sketch file/ What to expect](#How-to-set-up-your-sketch-file/-What-to-expect)
-* [How to generate the code](#How-to-generate-code)
-* [How it works](#How-it-works)
-* [How to modify it](#How-to-modify-it)
-* [Ideas for the Future](#Ideas-for-the-Future)
+* [How to set up your sketch file/ What to expect](#how-to-set-up-your-sketch-file/-What-to-expect)
+* [How to generate the code](#how-to-generate-code)
+* [How it works](#how-it-works)
+* [How to modify it](#how-to-modify-it)
+* [Ideas for the Future](#ideas-for-the-Future)
 
 
 How to set up your sketch file/ What to expect
@@ -24,7 +24,7 @@ How to set up your sketch file/ What to expect
 ###Use Symbols
 * The plugin works by turning individual symbols into subclassed UIViews.
 * It will loop through the sub elements of a symbol and add them to the symbol's view, style the subviews, and generate constraints.
-* Keep symbols simple, one layer of depth, if a symbol is becoming complex, you can probably split it up into multiple symbols. 
+* **Keep symbols simple, one layer of depth**, if a symbol is becoming complex, you can probably split it up into multiple symbols. 
 
 ###Text Areas 
 * Any piece of text in your design will be output as a UILabel. After exporting you can always change it to whatever you want in XCode
@@ -34,20 +34,22 @@ How to set up your sketch file/ What to expect
 ###Images
 * Anything that is set to exportable will be treated as an image.
 * You will need to import the actual UIImage and set it manually.
+
 ![images](images/imageview.png)
 
 ###Sub Symbols
 * If there is a symbol inside of the symbol you are exporting it is treated as if it is of a custom UIView subclass.
+
 ![symbols](images/symbolDecleration.png)
 
 ###Groups
 * Groups are treated as an "undefined" class type, unless they are set to exportable (they will then be an image). They will be added into the view hierarchy and constraints will be created, but you will have to manually update the initialization code.
 
 ###Everything else is ignored
-* For now, everything else is ignored. If you want it to be exported make it exportable so it is treated as an image or fork this repo and help us add use cases!
+* For now, everything else is ignored. If you want it to be exported make it exportable so it is treated as an image or pull this repo and help us add use cases!
 
 ###Snapkit
-* We are using [SnapKit](https://github.com/SnapKit/SnapKit) to set up constraints you will need to include it within your project. 
+* We are using [SnapKit](https://github.com/SnapKit/SnapKit) to set up constraints, you will need to include it within your project. 
 
 ###Expectations
 * This plugin is not meant to generate the end all be all of the views within your app. It is meant to generate a starting point, the scaffolding for creating your views. Reducing the need to write a ton of boiler plate code every project.
@@ -62,7 +64,8 @@ How to generate code
 	* **Example 2**: You want a view to fix the top of itself to the top of the superview. You would select superview from Snap Top to view: and leave "Snap to view's bottom." unchecked.
 	* "Fix Element's Height" and "Fix Element's Width" use the pixel values defined in Sketch to set the element's size.
 	* "set width to view's width:" and "set height to view's height:" will set the element's width/height to match whatever the corresponding view's width/height is.
-* After constraints are set on every element, select the symbol and run "Generate View Code." The view code will be copied to your clipboard and you can paste it into XCode
+* **If you don't set up constraints, it will still generate view code, but the constraint definitions will be blank**
+* After constraints are set on every element, select the symbol and run "Generate View Code." **The view code will be copied to your clipboard and you can paste it into XCode**
 
 
 How it works
