@@ -87,6 +87,7 @@ defaults write ~/Library/Preferences/com.bohemiancoding.sketch3.plist AlwaysRelo
 
 Ideas for the Future
 ------
+* A better UI for specifying constraints, maybe a new panel within sketch rather than a popup.
 * Look into generating constraints automatically, removing the need to specify them
 * Split out padding/offsets into a constants files to be reused throughout the app
 * Connect plugin to XCode project for auto insertion of view code.
