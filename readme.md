@@ -24,7 +24,7 @@ How to set up your sketch file/ What to expect
 ###Use Symbols
 * The plugin works by turning individual symbols into subclassed UIViews.
 * It will loop through the sub elements of a symbol and add them to the symbol's view, style the subviews, and generate constraints.
-* **Keep symbols simple, one layer of depth**, if a symbol is becoming complex, you can probably split it up into multiple symbols. 
+* **Keep symbols simple, one layer of depth**, if a symbol is becoming complex, you can probably split it up into multiple symbols and multiple views.
 
 ###Text Areas 
 * Any piece of text in your design will be output as a UILabel. After exporting you can always change it to whatever you want in XCode
