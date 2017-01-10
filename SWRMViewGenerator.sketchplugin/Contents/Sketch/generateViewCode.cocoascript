@@ -152,14 +152,21 @@ Plugin.getOffsetForConstraint = function(type, constraint, layer) {
   }
 
   var otherLayer = parent;
+  log("THE SUPER VIEW IS!!!!!!!!  " + constraint.snapView);
   if (constraint.snapView != "superview") {
     var children = Utils.getChildLayers(parent);
     for (var i = 0; i < children.length; i++) {
-      if (children[i].name() == constraint.snapView) {
+      log(children[i].name() + " " + constraint.snapView);
+      if (String(children[i].name()) == constraint.snapView) {
+        log("the other view is going to be: ")
+        log(children[i].name());
         otherLayer = children[i];
       }
     }
   }
+
+  log("the other view IS: ")
+  log(otherLayer.name());
   var oppositeSide = constraint.oppositeSide;
 
   var otherLayerPosition = otherLayer.frame().origin().x;
@@ -180,20 +187,22 @@ Plugin.getOffsetForConstraint = function(type, constraint, layer) {
         .size().height;
     }
   } else {
-    log(otherLayer.bounds());
+    var bounds = CGRectMake(0, 0, otherLayer.bounds().size.width, otherLayer.bounds().size.height);
+    log(bounds);
+    log(bounds.origin);
+    log(bounds.size);
     if ((type == "left" && oppositeSide == 0) || (type == "right" &&
         oppositeSide == 1)) {
-      otherLayerPosition = otherLayer.bounds().origin.x;
+      otherLayerPosition = bounds.origin.x;
     } else if ((type == "right" && oppositeSide == 0) || (type == "left" &&
         oppositeSide == 1)) {
-      otherLayerPosition = otherLayer.bounds().origin.x + otherLayer.bounds()
-        .size.width;
+      otherLayerPosition = bounds.origin.x + bounds.size.width;
     } else if ((type == "top" && oppositeSide == 0) || (type == "bottom" &&
         oppositeSide == 1)) {
-      otherLayerPosition = otherLayer.bounds().origin.y;
+      otherLayerPosition = bounds.origin.y;
     } else if ((type == "bottom" && oppositeSide == 0) || (type == "top" &&
         oppositeSide == 1)) {
-      otherLayerPosition = otherLayer.bounds().origin.y + otherLayer.bounds()
+      otherLayerPosition = bounds.origin.y + bounds
         .size.height;
     }
   }
