@@ -1,83 +1,59 @@
 @import "Library/utils.js"
-@import "Library/codeFormatter.cocoascript"
-
-var generateViewCode = function(context) {
-  var documentName = context.document.displayName();
-  log('The current document is named: ' + documentName);
-  Plugin.start(context);
-
-};
 
 
 
-var Plugin = {};
-Plugin.context;
-Plugin.document;
-Plugin.page;
-Plugin.saveDirectory;
-Plugin.command;
 
-Plugin.setContext = function(context) {
-  Plugin.context = context;
-  Plugin.document = context.document;
-  Plugin.page = context.document.currentPage();
-  Plugin.command = context.command;
+
+var ViewTreeCreator = {};
+ViewTreeCreator.context;
+ViewTreeCreator.document;
+ViewTreeCreator.page;
+ViewTreeCreator.saveDirectory;
+ViewTreeCreator.command;
+
+ViewTreeCreator.setContext = function(context) {
+  ViewTreeCreator.context = context;
+  ViewTreeCreator.document = context.document;
+  ViewTreeCreator.page = context.document.currentPage();
+  ViewTreeCreator.command = context.command;
+  log(ViewTreeCreator.command);
+  log(ViewTreeCreator.command.valueForKey);
 }
 
-Plugin.start = function(context) {
-  var selectedLayers = context.selection;
-  Plugin.setContext(context);
-  //Utils.runOnEachSelectedLayer(selectedLayers, 1, Plugin.onSelectedLayerCallback);
-  Plugin.startLayerTreeCreate(selectedLayers, function(error, tree) {
-    if (error) {
-      Utils.showAlert(error);
-      return;
-    }
-    log(tree);
-    var code = CodeFormatter.getClassFromTree(tree);
-    log(code);
-    var pasteBoard = [NSPasteboard generalPasteboard]
-    log(pasteBoard);
-    [pasteBoard clearContents];
-    [pasteBoard declareTypes:[NSArray arrayWithObject:NSPasteboardTypeString] owner:nil]
-    [pasteBoard setString:code forType:NSPasteboardTypeString]
-    Utils.showAlert("Your view code has been copied to your clipboard");
-  });
-}
 
-Plugin.startLayerTreeCreate = function(layers, callback) {
-  if (Plugin.checkIfOneSymbolIsSelected(layers) == false) {
+ViewTreeCreator.startLayerTreeCreate = function(layers, callback) {
+  if (ViewTreeCreator.checkIfOneSymbolIsSelected(layers) == false) {
     callback("Please select a Symbol");
     return;
   }
   var layer = layers[0];
   var tree = {};
-  tree = Plugin.createLayerTree(tree, layer, true);
+  tree = ViewTreeCreator.createLayerTree(tree, layer, true);
   callback(undefined, tree);
 }
 
-Plugin.loopThroughSubLayersAndAddToTree = function(layer, tree) {
+ViewTreeCreator.loopThroughSubLayersAndAddToTree = function(layer, tree) {
   var sublayers = Utils.getChildLayers(layer);
   for (var i = 0; i < sublayers.length; i++) {
     var l = sublayers[i];
-    tree = Plugin.createLayerTree(tree, l, false);
+    tree = ViewTreeCreator.createLayerTree(tree, l, false);
   }
   return tree;
 }
 
 
-Plugin.createLayerTree = function(tree, layer, isStart) {
+ViewTreeCreator.createLayerTree = function(tree, layer, isStart) {
   var name = layer.name();
   tree[name] = {};
   if (isStart) {
     tree[name].topLevel = isStart;
   }
-  tree[name] = Plugin.addViewDataToTree(tree[name], layer);
-  tree[name] = Plugin.addConstraintsToTreeData(tree[name], layer);
+  tree[name] = ViewTreeCreator.addViewDataToTree(tree[name], layer);
+  tree[name] = ViewTreeCreator.addConstraintsToTreeData(tree[name], layer);
   if (Utils.isLayerExportable(layer) == false && Utils.isTextLayer(layer) ==
     false && Utils.isLayerASymbolInstance(layer) == false) {
     tree[name]["children"] = {};
-    tree[name]["children"] = Plugin.loopThroughSubLayersAndAddToTree(layer,
+    tree[name]["children"] = ViewTreeCreator.loopThroughSubLayersAndAddToTree(layer,
       tree[name]["children"]);
   }
 
@@ -85,7 +61,7 @@ Plugin.createLayerTree = function(tree, layer, isStart) {
 }
 
 
-Plugin.checkIfOneSymbolIsSelected = function(layers) {
+ViewTreeCreator.checkIfOneSymbolIsSelected = function(layers) {
   if (layers.length == 0 || layers.length > 1) {
     return false;
   }
@@ -98,31 +74,31 @@ Plugin.checkIfOneSymbolIsSelected = function(layers) {
 }
 
 
-Plugin.addViewDataToTree = function(tree, layer) {
+ViewTreeCreator.addViewDataToTree = function(tree, layer) {
   if (Utils.isTextLayer(layer)) {
-    tree = Plugin.addTextLayerDataToTree(tree, layer);
+    tree = ViewTreeCreator.addTextLayerDataToTree(tree, layer);
   } else if (Utils.isLayerExportable(layer)) {
-    tree = Plugin.addImageLayerDataToTree(tree, layer);
+    tree = ViewTreeCreator.addImageLayerDataToTree(tree, layer);
   } else if (Utils.isLayerASymbol(layer)) {
-    tree = Plugin.addSymbolLayerDataToTree(tree, layer);
+    tree = ViewTreeCreator.addSymbolLayerDataToTree(tree, layer);
   }
   return tree;
 }
 
-Plugin.addSymbolLayerDataToTree = function(tree, layer) {
+ViewTreeCreator.addSymbolLayerDataToTree = function(tree, layer) {
   tree.type = Utils.capitalizeFirstLetter(Utils.camelize(layer.name()));
 
   return tree;
 }
 
-Plugin.addImageLayerDataToTree = function(tree, layer) {
+ViewTreeCreator.addImageLayerDataToTree = function(tree, layer) {
   tree.type = "UIImageView";
   tree.contentMode = ".scaleAspectFill";
   tree.image = "fillThisIn!"
   return tree;
 }
 
-Plugin.addTextLayerDataToTree = function(tree, layer) {
+ViewTreeCreator.addTextLayerDataToTree = function(tree, layer) {
   tree.type = "UILabel";
   tree.font = 'UIFont(name:"' + layer.font().fontName() + '", size: ' + layer
     .font().pointSize() + ')'; //layer.font().fontName();
@@ -136,7 +112,7 @@ Plugin.addTextLayerDataToTree = function(tree, layer) {
   return tree;
 }
 
-Plugin.getOffsetForConstraint = function(type, constraint, layer) {
+ViewTreeCreator.getOffsetForConstraint = function(type, constraint, layer) {
   var parent = layer.parentSymbol();
   if (parent == layer || constraint.snapView == "") {
     log("SAME THING!");
@@ -219,8 +195,11 @@ Plugin.getOffsetForConstraint = function(type, constraint, layer) {
   return offset;
 }
 
-Plugin.addConstraintsToTreeData = function(tree, layer) {
-  var command = Plugin.command;
+ViewTreeCreator.addConstraintsToTreeData = function(tree, layer) {
+  var command = ViewTreeCreator.command;
+  log("getting constraint data");
+  log(command);
+  log(typeof command.valueForKey);
   var t = [command valueForKey: "top-constraint"
     onLayer: layer forPluginIdentifier: "SWRM"
   ];
@@ -247,7 +226,7 @@ Plugin.addConstraintsToTreeData = function(tree, layer) {
     top = {};
     top.snapView = t.snapView;
     top.oppositeSide = t.oppositeSide;
-    top.offset = Plugin.getOffsetForConstraint("top", top, layer);
+    top.offset = ViewTreeCreator.getOffsetForConstraint("top", top, layer);
   } else {
     top = {
       offset: null,
@@ -260,7 +239,7 @@ Plugin.addConstraintsToTreeData = function(tree, layer) {
     left = {};
     left.snapView = l.snapView;
     left.oppositeSide = l.oppositeSide;
-    left.offset = Plugin.getOffsetForConstraint("left", left, layer);
+    left.offset = ViewTreeCreator.getOffsetForConstraint("left", left, layer);
   } else {
     left = {
       offset: null,
@@ -273,7 +252,7 @@ Plugin.addConstraintsToTreeData = function(tree, layer) {
     bottom = {};
     bottom.snapView = b.snapView;
     bottom.oppositeSide = b.oppositeSide;
-    bottom.offset = Plugin.getOffsetForConstraint("bottom", bottom, layer);
+    bottom.offset = ViewTreeCreator.getOffsetForConstraint("bottom", bottom, layer);
   } else {
     bottom = {
       offset: null,
@@ -286,7 +265,7 @@ Plugin.addConstraintsToTreeData = function(tree, layer) {
     right = {};
     right.snapView = r.snapView;
     right.oppositeSide = r.oppositeSide;
-    right.offset = Plugin.getOffsetForConstraint("right", right, layer);
+    right.offset = ViewTreeCreator.getOffsetForConstraint("right", right, layer);
   } else {
     right = {
       offset: null,

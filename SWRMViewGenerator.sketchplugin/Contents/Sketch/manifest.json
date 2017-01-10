@@ -1,8 +1,8 @@
 {
   "author": "",
   "commands": [{
-    "script": "generateViewCode.cocoascript",
-    "name": "Generate View Code",
+    "script": "generateiOSViewCode.cocoascript",
+    "name": "Generate iOS View Code",
     "handlers": {
       "run": "generateViewCode"
     },

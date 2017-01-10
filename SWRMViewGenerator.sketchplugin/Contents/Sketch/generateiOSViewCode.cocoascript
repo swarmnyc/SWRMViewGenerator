@@ -1,0 +1,33 @@
+@import "Library/iosCodeFormatter.cocoascript"
+@import "generateViewTree.cocoascript"
+
+var generateViewCode = function(context) {
+  var documentName = context.document.displayName();
+  log('The current document is named: ' + documentName);
+  log(context);
+  Plugin.start(context);
+
+
+};
+
+var Plugin = {};
+
+Plugin.start = function(context) {
+  var selectedLayers = context.selection;
+  ViewTreeCreator.setContext(context);
+  ViewTreeCreator.startLayerTreeCreate(selectedLayers, function(error, tree) {
+  if (error) {
+    Utils.showAlert(error);
+    return;
+  }
+  log(tree);
+  var code = CodeFormatter.getClassFromTree(tree);
+  log(code);
+  var pasteBoard = [NSPasteboard generalPasteboard]
+  log(pasteBoard);
+  [pasteBoard clearContents];
+  [pasteBoard declareTypes:[NSArray arrayWithObject:NSPasteboardTypeString] owner:nil]
+  [pasteBoard setString:code forType:NSPasteboardTypeString]
+  Utils.showAlert("Your view code has been copied to your clipboard");
+});
+}
